@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rando Commando</title>
+<meta name="theme-color" content="#d7262f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one column of race-day tools. A sticky "starting grid" control bar, then
+   player cards in a wrapping grid, the item box, bucket counters, and past rounds. */
+:root {
+  --bg: #f3f4f8;
+  --surface: #ffffff;
+  --fg: #1b1d2a;
+  --muted: #5d6178;
+  --line: #dcdfe9;
+  --accent: #d7262f;      /* racing red */
+  --accent-fg: #ffffff;
+  --star: #ffc21a;        /* star yellow */
+  --star-fg: #2a2100;
+  --p1: #d7262f; --p2: #1f6fe0; --p3: #e5a100; --p4: #1f9d4c;
+  --p5: #8a3fd1; --p6: #e0610f; --p7: #0f9fae; --p8: #d63c8f;
+  --font-display: "Bungee", "Arial Black", Impact, sans-serif;
+  --font-body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 14px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12131c; --surface: #1c1e2b; --fg: #eceef6; --muted: #a2a6bd; --line: #2f3245;
+    --accent: #ff4b55; --accent-fg: #1a0306; --star: #ffcf40; --star-fg: #2a2100;
+    --p1: #ff5a63; --p2: #5b9bff; --p3: #ffc233; --p4: #3fcf7a;
+    --p5: #b47bff; --p6: #ff8a3d; --p7: #33d0de; --p8: #ff6db6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12131c; --surface: #1c1e2b; --fg: #eceef6; --muted: #a2a6bd; --line: #2f3245;
+  --accent: #ff4b55; --accent-fg: #1a0306; --star: #ffcf40; --star-fg: #2a2100;
+  --p1: #ff5a63; --p2: #5b9bff; --p3: #ffc233; --p4: #3fcf7a;
+  --p5: #b47bff; --p6: #ff8a3d; --p7: #33d0de; --p8: #ff6db6;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+}
+.wrap {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 0 48px;
+  display: grid;
+  gap: 24px;
+}
+
+/* Checkered finish-line strip */
+.flag {
+  height: 14px;
+  background:
+    conic-gradient(var(--fg) 25%, var(--bg) 0 50%, var(--fg) 0 75%, var(--bg) 0) 0 0 / 14px 14px;
+  opacity: .9;
+}
+
+header.top { padding-top: 20px; display: grid; gap: 4px; }
+h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2rem, 7vw, 3.25rem);
+  line-height: 1;
+  margin: 0;
+  letter-spacing: .01em;
+  text-wrap: balance;
+}
+h1 .red { color: var(--accent); }
+.tag { margin: 0; color: var(--muted); }
+
+h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.15rem;
+  margin: 0;
+  letter-spacing: .02em;
+  text-wrap: balance;
+}
+.label {
+  font-family: var(--font-data);
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+}
+
+/* Starting grid: sticky controls */
+.grid-bar {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 5;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 14px;
+  box-shadow: 0 6px 18px -12px rgba(0,0,0,.35);
+}
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 6px; }
+.seg { display: flex; gap: 5px; flex-wrap: wrap; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 42px;
+  border-radius: 10px;
+  border: 2px solid var(--line);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  cursor: pointer;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+.seg input:checked + label { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.seg input:focus-visible + label { outline: 3px solid var(--star); outline-offset: 2px; }
+
+.go {
+  flex: 1 1 220px;
+  min-height: 52px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  letter-spacing: .02em;
+  cursor: pointer;
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--accent) 60%, #000);
+  transition: transform .08s ease, box-shadow .08s ease;
+}
+.go:active { transform: translateY(3px); box-shadow: 0 1px 0 0 color-mix(in srgb, var(--accent) 60%, #000); }
+.go:focus-visible { outline: 3px solid var(--star); outline-offset: 3px; }
+.go:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Round results */
+.round-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.players {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-width: 0;
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.pbadge {
+  font-family: var(--font-display);
+  font-size: .95rem;
+  color: #fff;
+  background: var(--pc, var(--p1));
+  border-radius: 8px;
+  padding: 2px 8px;
+  line-height: 1.4;
+}
+.card-head .racer { font-weight: 800; font-size: 1.15rem; min-width: 0; overflow-wrap: anywhere; }
+dl.build { margin: 0; padding: 10px 14px 14px; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: baseline; }
+dl.build dt { margin: 0; }
+dl.build dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.reused { font-family: var(--font-data); font-size: .65rem; color: var(--muted); margin-left: 6px; text-transform: uppercase; letter-spacing: .06em; }
+
+.itembox {
+  background: var(--surface);
+  border: 2px solid var(--star);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.chips li {
+  background: var(--star);
+  color: var(--star-fg);
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+.count { font-family: var(--font-data); font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.empty {
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 22px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Bucket meters */
+.meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.meter { display: grid; gap: 6px; }
+.meter .row { display: flex; justify-content: space-between; gap: 8px; }
+.meter .num { font-family: var(--font-data); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--fg); border-radius: inherit; }
+
+/* History */
+details.past { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+details.past > summary { cursor: pointer; padding: 12px 14px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+details.past > summary:focus-visible { outline: 3px solid var(--star); outline-offset: 2px; border-radius: var(--radius); }
+.past-body { padding: 0 14px 14px; display: grid; gap: 8px; }
+.past-body ol { margin: 0; padding-left: 1.4em; display: grid; gap: 4px; }
+.past-body .pu { color: var(--muted); font-size: .92rem; }
+.history { display: grid; gap: 8px; }
+
+/* Data + memory */
+.tools { display: grid; gap: 12px; padding: 14px; border-top: 1px solid var(--line); }
+.tools p { margin: 0; color: var(--muted); }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn {
+  font: inherit;
+  font-weight: 700;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.btn:focus-visible { outline: 3px solid var(--star); outline-offset: 2px; }
+.btn.danger { border-color: var(--accent); color: var(--accent); }
+.btn.solid-danger { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.notice { padding: 10px 14px; border-radius: 10px; background: color-mix(in srgb, var(--star) 22%, var(--surface)); }
+.notice.err { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+code { font-family: var(--font-data); font-size: .85em; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .players .card, .itembox { animation: pop .28s ease-out both; }
+  .players .card:nth-child(2) { animation-delay: .04s; }
+  .players .card:nth-child(3) { animation-delay: .08s; }
+  .players .card:nth-child(4) { animation-delay: .12s; }
+  .players .card:nth-child(5) { animation-delay: .16s; }
+  .players .card:nth-child(6) { animation-delay: .20s; }
+  .players .card:nth-child(7) { animation-delay: .24s; }
+  .players .card:nth-child(8) { animation-delay: .28s; }
+  @keyframes pop { from { transform: translateY(6px) scale(.98); } to { transform: none; } }
+}
+</style>
+</head>
+<body>
+<div class="flag" aria-hidden="true"></div>
+<main class="wrap">
+  <header class="top">
+    <h1>Rando <span class="red">Commando</span></h1>
+    <p class="tag">Random racer, kart, tires and glider for every player, plus a random item set.</p>
+  </header>
+
+  <form class="grid-bar" id="controls">
+    <fieldset>
+      <legend class="label">How many players?</legend>
+      <div class="seg" id="playerSeg"></div>
+    </fieldset>
+    <button class="go" id="goBtn" type="submit">Rando Commando It</button>
+  </form>
+
+  <div id="dataNotice" class="notice" hidden></div>
+
+  <section id="result" aria-live="polite"></section>
+
+  <section id="meterSection" class="card" hidden>
+    <div class="card-head"><h2>Left before reshuffle</h2></div>
+    <div class="meters" id="meters" style="padding:14px"></div>
+  </section>
+
+  <section id="historySection" hidden>
+    <div class="round-head" style="margin-bottom:10px">
+      <h2>Previous rounds</h2>
+      <span class="count" id="historyCount"></span>
+    </div>
+    <div class="history" id="history"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Your lists</h2></div>
+    <div class="tools">
+      <p id="sourceLine">Loading lists…</p>
+      <div class="btns">
+        <label class="btn" for="csvInput" tabindex="0" id="uploadLabel">Upload CSV</label>
+        <input id="csvInput" type="file" accept=".csv,text/csv" hidden>
+        <button class="btn" type="button" id="useDefaultBtn" hidden>Use built-in list</button>
+        <button class="btn danger" type="button" id="resetBtn">Clear memory</button>
+      </div>
+      <div id="confirmReset" class="notice err" hidden>
+        <p style="margin:0 0 8px;color:var(--fg)">Clear every previous round and start all buckets fresh?</p>
+        <div class="btns">
+          <button class="btn solid-danger" type="button" id="confirmYes">Yes, clear it</button>
+          <button class="btn" type="button" id="confirmNo">Keep it</button>
+        </div>
+      </div>
+      <p>CSV format: one column per bucket with headers <code>Racers, Karts, Tires, Gliders, Power-Ups</code>. Columns can have different lengths.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORE_KEY = "rando-commando-v1";
+  var DEFAULT_CSV_URL = "mario-kart.csv";
+  var BUCKETS = [
+    { key: "racers",   label: "Racer",  plural: "Racers",    match: /racer|character|driver/i },
+    { key: "karts",    label: "Kart",   plural: "Karts",     match: /kart|vehicle|body|cart/i },
+    { key: "tires",    label: "Tires",  plural: "Tires",     match: /tire|tyre|wheel/i },
+    { key: "gliders",  label: "Glider", plural: "Gliders",   match: /glider/i },
+    { key: "powerups", label: "Power-Up", plural: "Power-Ups", match: /power|item/i }
+  ];
+  var BUILD_BUCKETS = BUCKETS.slice(0, 4);
+  var MIN_PLAYERS = 2, MAX_PLAYERS = 8;
+  var MIN_PU = 2, MAX_PU = 10;
+
+  // ---------- storage ----------
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return null;
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  var state = load() || {};
+  state.rounds = state.rounds || [];
+  state.pools = state.pools || {};
+  // state.customCsv: text of an uploaded CSV (overrides the built-in file)
+  // state.dataSig: signature of the list the pools were built from
+  var data = null; // { racers: [...], karts: [...], ... }
+
+  // ---------- CSV ----------
+  function parseCsv(text) {
+    var rows = [], row = [], field = "", inQ = false, i, c;
+    text = text.replace(/^﻿/, "");
+    for (i = 0; i < text.length; i++) {
+      c = text[i];
+      if (inQ) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false;
+        } else field += c;
+      } else if (c === '"') inQ = true;
+      else if (c === ",") { row.push(field); field = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
+        row.push(field); rows.push(row); row = []; field = "";
+      } else field += c;
+    }
+    if (field !== "" || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (f) { return f.trim() !== ""; }); });
+  }
+
+  function bucketFor(name) {
+    for (var i = 0; i < BUCKETS.length; i++) if (BUCKETS[i].match.test(name)) return BUCKETS[i].key;
+    return null;
+  }
+
+  // Accepts either one column per bucket (header row = bucket names),
+  // or a two-column "Category,Name" list.
+  function csvToData(text) {
+    var rows = parseCsv(text);
+    if (!rows.length) throw new Error("The CSV is empty.");
+    var out = {};
+    BUCKETS.forEach(function (b) { out[b.key] = []; });
+
+    var header = rows[0].map(function (h) { return h.trim(); });
+    var colKeys = header.map(bucketFor);
+    var columnar = colKeys.filter(Boolean).length >= 2;
+
+    if (columnar) {
+      rows.slice(1).forEach(function (r) {
+        r.forEach(function (cell, ci) {
+          var k = colKeys[ci], v = cell.trim();
+          if (k && v) out[k].push(v);
+        });
+      });
+    } else {
+      rows.forEach(function (r) {
+        if (r.length < 2) return;
+        var k = bucketFor(r[0]), v = r[1].trim();
+        if (k && v) out[k].push(v);
+      });
+    }
+    BUCKETS.forEach(function (b) {
+      var seen = {};
+      out[b.key] = out[b.key].filter(function (v) {
+        var id = v.toLowerCase();
+        if (seen[id]) return false;
+        seen[id] = true;
+        return true;
+      });
+    });
+    var missing = BUCKETS.filter(function (b) { return !out[b.key].length; }).map(function (b) { return b.plural; });
+    if (missing.length) throw new Error("No entries found for: " + missing.join(", ") + ". Check the column headers.");
+    return out;
+  }
+
+  function signature(d) {
+    return BUCKETS.map(function (b) { return d[b.key].join("\u0001"); }).join("\u0002");
+  }
+
+  // ---------- randomness ----------
+  function randInt(min, max) { // inclusive
+    var range = max - min + 1;
+    if (window.crypto && crypto.getRandomValues) {
+      var buf = new Uint32Array(1), limit = Math.floor(0x100000000 / range) * range;
+      do { crypto.getRandomValues(buf); } while (buf[0] >= limit);
+      return min + (buf[0] % range);
+    }
+    return min + Math.floor(Math.random() * range);
+  }
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = randInt(0, i), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  // Draw n picks from a bucket's remaining pool. A pick never repeats something
+  // already picked this round unless the bucket has fewer options than players.
+  // When the pool runs dry it is reshuffled from the full list.
+  function drawBuild(key, n) {
+    var all = data[key];
+    var pool = state.pools[key] || [];
+    var picks = [], reused = [];
+    for (var i = 0; i < n; i++) {
+      if (!pool.length) {
+        var fresh = shuffle(all);
+        // Things already picked this round go to the back of the new pool.
+        pool = fresh.filter(function (x) { return picks.indexOf(x) < 0; })
+          .concat(fresh.filter(function (x) { return picks.indexOf(x) >= 0; }));
+      }
+      var idx = 0;
+      for (var j = 0; j < pool.length; j++) {
+        if (picks.indexOf(pool[j]) < 0) { idx = j; break; }
+      }
+      var pick = pool.splice(idx, 1)[0];
+      reused.push(picks.indexOf(pick) >= 0);
+      picks.push(pick);
+    }
+    state.pools[key] = pool;
+    return { picks: picks, reused: reused };
+  }
+
+  function drawPowerups() {
+    var all = data.powerups;
+    var n = Math.min(randInt(MIN_PU, MAX_PU), all.length);
+    return shuffle(all).slice(0, n);
+  }
+
+  function syncPoolsToData() {
+    var sig = signature(data);
+    if (state.dataSig !== sig) {
+      // The lists changed: start every bucket from a fresh shuffle.
+      state.pools = {};
+      state.dataSig = sig;
+      save();
+    }
+    BUILD_BUCKETS.forEach(function (b) {
+      if (!Array.isArray(state.pools[b.key])) state.pools[b.key] = shuffle(data[b.key]);
+    });
+  }
+
+  // ---------- UI ----------
+  var $ = function (id) { return document.getElementById(id); };
+  var el = function (tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  };
+
+  function buildPlayerSeg() {
+    var seg = $("playerSeg");
+    for (var n = MIN_PLAYERS; n <= MAX_PLAYERS; n++) {
+      var id = "players-" + n;
+      var input = el("input");
+      input.type = "radio"; input.name = "players"; input.id = id; input.value = String(n);
+      if (n === 2) input.checked = true;
+      var label = el("label", null, String(n));
+      label.htmlFor = id;
+      label.title = n + " players";
+      seg.appendChild(input); seg.appendChild(label);
+    }
+  }
+  function playerCount() {
+    var c = document.querySelector('input[name="players"]:checked');
+    return c ? parseInt(c.value, 10) : 2;
+  }
+
+  function fmtTime(ts) {
+    try {
+      return new Date(ts).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    } catch (e) { return ""; }
+  }
+
+  function renderRound(round, number) {
+    var wrap = $("result");
+    wrap.innerHTML = "";
+    if (!round) {
+      wrap.appendChild(el("div", "empty", "Pick the number of players and hit Rando Commando It."));
+      return;
+    }
+    var head = el("div", "round-head");
+    head.style.marginBottom = "10px";
+    head.appendChild(el("h2", null, "Round " + number));
+    head.appendChild(el("span", "count", fmtTime(round.at)));
+    wrap.appendChild(head);
+
+    var grid = el("div", "players");
+    round.players.forEach(function (p, i) {
+      var card = el("article", "card");
+      card.style.setProperty("--pc", "var(--p" + (i + 1) + ")");
+      var ch = el("div", "card-head");
+      ch.appendChild(el("span", "pbadge", "P" + (i + 1)));
+      ch.appendChild(el("span", "racer", "Player " + (i + 1)));
+      card.appendChild(ch);
+      var dl = el("dl", "build");
+      BUILD_BUCKETS.forEach(function (b) {
+        dl.appendChild(el("dt", "label", b.label));
+        var dd = el("dd", null, p[b.key]);
+        if (p.reused && p.reused[b.key]) dd.appendChild(el("span", "reused", "repeat"));
+        dl.appendChild(dd);
+      });
+      card.appendChild(dl);
+      grid.appendChild(card);
+    });
+    wrap.appendChild(grid);
+
+    var box = el("div", "itembox");
+    box.style.marginTop = "14px";
+    var bh = el("div", "round-head");
+    bh.appendChild(el("h2", null, "Power-Ups"));
+    bh.appendChild(el("span", "count", round.powerups.length + " items this round"));
+    box.appendChild(bh);
+    var ul = el("ul", "chips");
+    round.powerups.forEach(function (pu) { ul.appendChild(el("li", null, pu)); });
+    box.appendChild(ul);
+    wrap.appendChild(box);
+  }
+
+  function renderMeters() {
+    if (!data) { $("meterSection").hidden = true; return; }
+    var m = $("meters");
+    m.innerHTML = "";
+    BUILD_BUCKETS.forEach(function (b) {
+      var total = data[b.key].length;
+      var left = (state.pools[b.key] || []).length;
+      var box = el("div", "meter");
+      var row = el("div", "row");
+      row.appendChild(el("span", "label", b.plural));
+      row.appendChild(el("span", "num", left + " / " + total));
+      box.appendChild(row);
+      var bar = el("div", "bar");
+      var fill = el("span");
+      fill.style.width = (total ? (left / total) * 100 : 0) + "%";
+      bar.appendChild(fill);
+      box.appendChild(bar);
+      m.appendChild(box);
+    });
+    $("meterSection").hidden = false;
+  }
+
+  function renderHistory() {
+    var rounds = state.rounds;
+    var h = $("history");
+    h.innerHTML = "";
+    if (rounds.length < 2) { $("historySection").hidden = true; return; }
+    $("historySection").hidden = false;
+    $("historyCount").textContent = (rounds.length - 1) + (rounds.length - 1 === 1 ? " round" : " rounds");
+    for (var i = rounds.length - 2; i >= 0; i--) {
+      var r = rounds[i];
+      var d = el("details", "past");
+      var s = el("summary");
+      s.appendChild(el("strong", null, "Round " + (i + 1)));
+      s.appendChild(el("span", "count", r.players.length + " players · " + fmtTime(r.at)));
+      d.appendChild(s);
+      var body = el("div", "past-body");
+      var ol = el("ol");
+      r.players.forEach(function (p) {
+        ol.appendChild(el("li", null, BUILD_BUCKETS.map(function (b) { return p[b.key]; }).join(" · ")));
+      });
+      body.appendChild(ol);
+      body.appendChild(el("div", "pu", "Power-Ups: " + r.powerups.join(", ")));
+      d.appendChild(body);
+      h.appendChild(d);
+    }
+  }
+
+  function renderAll() {
+    var n = state.rounds.length;
+    renderRound(n ? state.rounds[n - 1] : null, n);
+    renderMeters();
+    renderHistory();
+  }
+
+  function showNotice(msg, isErr) {
+    var nEl = $("dataNotice");
+    nEl.textContent = msg;
+    nEl.className = "notice" + (isErr ? " err" : "");
+    nEl.hidden = !msg;
+  }
+
+  function setData(d, sourceText) {
+    data = d;
+    syncPoolsToData();
+    $("goBtn").disabled = false;
+    $("sourceLine").textContent = sourceText + ": " +
+      BUCKETS.map(function (b) { return data[b.key].length + " " + b.plural.toLowerCase(); }).join(", ") + ".";
+    $("useDefaultBtn").hidden = !state.customCsv;
+    renderAll();
+  }
+
+  function generate() {
+    if (!data) return;
+    var n = playerCount();
+    var picks = {};
+    BUILD_BUCKETS.forEach(function (b) { picks[b.key] = drawBuild(b.key, n); });
+    var players = [];
+    for (var i = 0; i < n; i++) {
+      var p = { reused: {} };
+      BUILD_BUCKETS.forEach(function (b) {
+        p[b.key] = picks[b.key].picks[i];
+        if (picks[b.key].reused[i]) p.reused[b.key] = true;
+      });
+      players.push(p);
+    }
+    state.rounds.push({ at: Date.now(), players: players, powerups: drawPowerups() });
+    save();
+    renderAll();
+  }
+
+  function loadDefault() {
+    showNotice("");
+    return fetch(DEFAULT_CSV_URL, { cache: "no-cache" })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
+      .then(function (t) { setData(csvToData(t), "Using the built-in list"); })
+      .catch(function () {
+        $("goBtn").disabled = true;
+        $("sourceLine").textContent = "No list loaded yet.";
+        showNotice("Upload your CSV below to get started.", false);
+        renderAll();
+      });
+  }
+
+  function init() {
+    buildPlayerSeg();
+    $("goBtn").disabled = true;
+
+    $("controls").addEventListener("submit", function (e) { e.preventDefault(); generate(); });
+
+    $("uploadLabel").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("csvInput").click(); }
+    });
+    $("csvInput").addEventListener("change", function (e) {
+      var f = e.target.files && e.target.files[0];
+      if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var d = csvToData(String(reader.result));
+          state.customCsv = String(reader.result);
+          state.customName = f.name;
+          save();
+          showNotice("");
+          setData(d, "Using " + f.name);
+        } catch (err) {
+          showNotice("Couldn't read " + f.name + ". " + err.message, true);
+        }
+        e.target.value = "";
+      };
+      reader.readAsText(f);
+    });
+
+    $("useDefaultBtn").addEventListener("click", function () {
+      delete state.customCsv; delete state.customName;
+      save();
+      loadDefault();
+    });
+
+    $("resetBtn").addEventListener("click", function () { $("confirmReset").hidden = false; });
+    $("confirmNo").addEventListener("click", function () { $("confirmReset").hidden = true; });
+    $("confirmYes").addEventListener("click", function () {
+      state.rounds = [];
+      state.pools = {};
+      save();
+      $("confirmReset").hidden = true;
+      if (data) syncPoolsToData();
+      save();
+      renderAll();
+    });
+
+    if (state.customCsv) {
+      try { setData(csvToData(state.customCsv), "Using " + (state.customName || "your uploaded CSV")); return; }
+      catch (e) { delete state.customCsv; save(); }
+    }
+    loadDefault();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
